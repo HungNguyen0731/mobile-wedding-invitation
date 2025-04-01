@@ -1,3 +1,4 @@
+
 # Build stage
 FROM node:18-alpine AS builder
 
@@ -10,20 +11,25 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Create .env file if not exists (you'll need to update client_id later)
+RUN if [ ! -f .env ]; then cp .env.sample .env || echo "VITE_APP_NAVERMAPS_CLIENT_ID=your-client-id" > .env; fi
+
 # Build the Vite application
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine AS runner
+FROM node:18-alpine AS runner
 
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx config if you have custom configuration
-# COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+# Install serve globally
+RUN npm install -g serve
 
-# Expose port
-EXPOSE 80
+# Copy the built files from the build stage
+COPY --from=builder /app/dist ./dist
 
-# Start Nginx server
-CMD ["nginx", "-g", "daemon off;"]
+# Expose the port the app runs on (serve defaults to 3000)
+EXPOSE 3000
+
+# Start the application with serve
+CMD ["serve", "-s", "dist", "-l", "3000"]
