@@ -10,23 +10,20 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Next.js application
+# Build the Vite application
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS runner
+FROM nginx:alpine AS runner
 
-WORKDIR /app
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Install serve for static file serving
-RUN npm install -g serve
+# Copy nginx config if you have custom configuration
+# COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy the built files from the build stage
-COPY --from=builder /app/out ./out
-COPY --from=builder /app/package.json ./
+# Expose port
+EXPOSE 80
 
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Start the application
-CMD ["serve", "-s", "out", "-l", "3000"]
+# Start Nginx server
+CMD ["nginx", "-g", "daemon off;"]
